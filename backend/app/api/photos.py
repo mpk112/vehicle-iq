@@ -14,7 +14,7 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.assessment import Assessment, AssessmentPhoto
 from app.services.photo_quality import PhotoQualityGate
-from app.schemas.common import SuccessResponse, ErrorResponse
+from app.schemas.common import APIResponse, ErrorDetail
 
 router = APIRouter(prefix="/v1/photos", tags=["photos"])
 
@@ -138,7 +138,7 @@ async def upload_photo(
     await db.commit()
     await db.refresh(photo)
     
-    return SuccessResponse(
+    return APIResponse(
         data={
             "photo_id": str(photo.id),
             "assessment_id": assessment_id,
@@ -204,7 +204,7 @@ async def get_assessment_photos(
     missing_angles = set(REQUIRED_ANGLES) - uploaded_angles
     is_complete = len(missing_angles) == 0
     
-    return SuccessResponse(
+    return APIResponse(
         data={
             "assessment_id": assessment_id,
             "photos": [
@@ -254,7 +254,7 @@ async def get_required_angles():
         "engine_bay": "Engine compartment"
     }
     
-    return SuccessResponse(
+    return APIResponse(
         data={
             "required_angles": [
                 {

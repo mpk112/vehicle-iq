@@ -4,7 +4,7 @@ import httpx
 import asyncio
 from typing import Dict, List, Optional
 from app.core.config import settings
-from app.services.photo_quality import PhotoQualityChecker
+from app.services.photo_quality import PhotoQualityGate
 
 
 class ImageIntelligenceService:
@@ -13,7 +13,7 @@ class ImageIntelligenceService:
     def __init__(self):
         self.paddleocr_url = settings.PADDLEOCR_URL
         self.yolo_url = settings.YOLO_URL
-        self.quality_checker = PhotoQualityChecker()
+        self.quality_checker = PhotoQualityGate()
     
     async def process_photo_complete(
         self,
