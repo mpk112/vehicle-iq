@@ -67,7 +67,7 @@ async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     # Create access token
     access_token_expires = timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email, "role": user.role.value},
+        data={"sub": str(user.id), "email": user.email, "role": user.role},
         expires_delta=access_token_expires,
     )
     

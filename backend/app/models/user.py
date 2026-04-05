@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 import uuid
 
 from app.core.database import Base
@@ -28,7 +28,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(SQLEnum(UserRole), nullable=False)
+    role = Column(ENUM('Assessor', 'Lender', 'Insurer', 'Broker', 'Admin', name='user_role', create_type=False), nullable=False)
     organization = Column(String(255), nullable=True)
     is_active = Column(String(10), default="true")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
