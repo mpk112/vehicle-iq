@@ -1,6 +1,3 @@
-# Exclude specific folders
-other_folder/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -11,6 +8,11 @@ env/
 venv/
 ENV/
 .venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
 *.egg-info/
 dist/
 build/
@@ -19,9 +21,11 @@ build/
 node_modules/
 .next/
 out/
-.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Environment variables
+# Environment
 .env
 .env.local
 .env.*.local
@@ -31,10 +35,15 @@ out/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Storage
+storage/
+uploads/
 
 # Logs
 *.log
@@ -45,4 +54,4 @@ logs/
 *.sqlite
 
 # Docker
-*.pid
+docker-compose.override.yml
