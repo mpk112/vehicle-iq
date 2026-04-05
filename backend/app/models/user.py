@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID, ENUM
+from sqlalchemy.orm import relationship
 import uuid
 
 from app.core.database import Base
@@ -33,6 +34,9 @@ class User(Base):
     is_active = Column(String(10), default="true")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    assessments = relationship("Assessment", foreign_keys="Assessment.user_id", back_populates="user")
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role})>"

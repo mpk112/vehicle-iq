@@ -11,7 +11,7 @@ from app.core.error_handlers import (
     validation_exception_handler,
     generic_exception_handler,
 )
-from app.api import auth, photos, image_intelligence
+from app.api import auth, photos, image_intelligence, assessments
 
 app = FastAPI(
     title="VehicleIQ API",
@@ -39,6 +39,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 app.include_router(auth.router)
 app.include_router(photos.router)
 app.include_router(image_intelligence.router)
+app.include_router(assessments.router)
 
 
 @app.get("/health")

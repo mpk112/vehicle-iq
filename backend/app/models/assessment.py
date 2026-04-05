@@ -1,109 +1,131 @@
-"""Assessment-related models."""
+"""Assessment models for VehicleIQ."""
 
-from datetime import datetime
-from enum import Enum
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, Index
+from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, ForeignKey, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
+from datetime import datetime
 import uuid
 
 from app.core.database import Base
 
 
-class AssessmentStatus(str, Enum):
-    """Assessment status enum."""
-
-    QUEUED = "queued"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 class Assessment(Base):
-    """Assessment model."""
-
+    """Assessment model - immutable core record of vehicle assessment."""
+    
     __tablename__ = "assessments"
-
+    
+    # Primary identification
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # User and organization
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    organization = Column(String(255), nullable=False)
     
     # Vehicle information
-    vin = Column(String(17), nullable=True, index=True)
-    make = Column(String(100), nullable=False)
-    model = Column(String(100), nullable=False)
-    year = Column(Integer, nullable=False)
-    variant = Column(String(200), nullable=True)
-    fuel_type = Column(String(50), nullable=True)
-    transmission = Column(String(50), nullable=True)
-    mileage = Column(Integer, nullable=True)
-    location = Column(String(200), nullable=True)
-    registration_number = Column(String(50), nullable=True)
+    vin = Column(String(17), nullable=False, index=True)
+    make = Column(String(100), nullable=False, index=True)
+    model = Column(String(100), nullable=False, index=True)
+    year = Column(Integer, nullable=False, index=True)
+    variant = Column(String(100))
+    fuel_type = Column(String(50))
+    transmission = Column(String(50))
+    mileage = Column(Integer)
+    location = Column(String(100))
+    registration_number = Column(String(20), index=True)
     
-    # Persona
-    persona = Column(String(50), nullable=False)
-    
-    # Status
-    status = Column(String(20), default=AssessmentStatus.QUEUED.value, nullable=False)
-    current_stage = Column(String(100), nullable=True)
+    # Assessment metadata
+    persona = Column(String(50), nullable=False)  # Lender, Insurer, Broker
+    status = Column(String(50), nullable=False, default="queued", index=True)  # queued, processing, completed, failed
+    current_stage = Column(String(100))  # Current pipeline stage
     progress_percentage = Column(Integer, default=0)
     
-    # AI Results (JSONB for flexibility)
-    fraud_result = Column(JSONB, nullable=True)
-    health_result = Column(JSONB, nullable=True)
-    price_prediction = Column(JSONB, nullable=True)
-    damage_detections = Column(JSONB, nullable=True)
-    ocr_results = Column(JSONB, nullable=True)
+    # AI outputs (JSONB for flexibility)
+    fraud_result = Column(JSONB)  # {confidence, signals, evidence}
+    health_result = Column(JSONB)  # {score, components, explanation}
+    price_prediction = Column(JSONB)  # {base_price, p10, p50, p90, persona_value, comparables}
+    damage_detections = Column(JSONB)  # {detections, summary}
+    ocr_results = Column(JSONB)  # {odometer, vin, registration, owner}
     
-    # Flags
-    fraud_gate_triggered = Column(String(10), default="false")
-    manual_review_required = Column(String(10), default="false")
+    # Fraud gate
+    fraud_gate_triggered = Column(Boolean, default=False, index=True)
+    fraud_confidence = Column(Float, default=0.0, index=True)
+    
+    # Manual review
+    requires_manual_review = Column(Boolean, default=False, index=True)
+    manual_review_reason = Column(String(255))
+    reviewed_at = Column(DateTime)
+    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    review_notes = Column(Text)
+    
+    # Override values (append-only, preserves immutability)
+    override_values = Column(JSONB)  # {field: {old, new, reason, by, at}}
+    
+    # Benchmarking
+    actual_transaction_price = Column(Float)
+    transaction_date = Column(DateTime)
+    transaction_type = Column(String(50))  # sale, loan, insurance
+    prediction_error = Column(Float)  # actual - predicted
+    
+    # Processing metadata
+    processing_time_ms = Column(Integer)
+    processing_started_at = Column(DateTime)
+    processing_completed_at = Column(DateTime)
+    error_message = Column(Text)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    completed_at = Column(DateTime, nullable=True)
-    processing_time_seconds = Column(Float, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="assessments")
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
     photos = relationship("AssessmentPhoto", back_populates="assessment", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        Index("idx_assessment_status", "status"),
-        Index("idx_assessment_user", "user_id"),
-        Index("idx_assessment_created", "created_at"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Assessment {self.id} - {self.make} {self.model} ({self.status})>"
+    
+    def __repr__(self):
+        return f"<Assessment {self.id} - {self.year} {self.make} {self.model} - {self.status}>"
 
 
 class AssessmentPhoto(Base):
-    """Assessment photo model."""
-
+    """Assessment photo model - stores photo metadata and AI results."""
+    
     __tablename__ = "assessment_photos"
-
+    
+    # Primary identification
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    assessment_id = Column(UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False)
+    assessment_id = Column(UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False, index=True)
     
     # Photo metadata
-    angle = Column(String(50), nullable=False)  # front, rear, left, right, etc.
-    file_path = Column(String(500), nullable=False)
-    storage_url = Column(String(500), nullable=True)
-    file_size_bytes = Column(Integer, nullable=True)
+    photo_angle = Column(String(50), nullable=False)  # front, rear, odometer, vin_plate, etc.
+    storage_path = Column(String(500), nullable=False)  # S3 path or local path
+    file_size = Column(Integer)  # bytes
+    mime_type = Column(String(50))
     
     # Quality gate results
-    quality_passed = Column(String(10), default="false")
-    quality_checks = Column(JSONB, nullable=True)
+    quality_passed = Column(Boolean, default=False)
+    quality_checks = Column(JSONB)  # {blur, lighting, resolution, framing}
+    quality_feedback = Column(Text)
     
-    # OCR and damage detection results
-    ocr_result = Column(JSONB, nullable=True)
-    damage_detections = Column(JSONB, nullable=True)
+    # OCR results (for specific angles)
+    ocr_extracted = Column(Boolean, default=False)
+    ocr_results = Column(JSONB)  # {odometer, vin, registration, owner, etc.}
+    ocr_confidence = Column(Float)
+    
+    # Damage detection results
+    damage_detected = Column(Boolean, default=False)
+    damage_detections = Column(JSONB)  # [{type, severity, confidence, bbox}]
+    damage_count = Column(Integer, default=0)
+    
+    # Processing metadata
+    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    processed_at = Column(DateTime)
+    processing_time_ms = Column(Integer)
     
     # Timestamps
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-    processed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
     assessment = relationship("Assessment", back_populates="photos")
-
-    def __repr__(self) -> str:
-        return f"<AssessmentPhoto {self.angle} for {self.assessment_id}>"
+    
+    def __repr__(self):
+        return f"<AssessmentPhoto {self.id} - {self.photo_angle} - Quality: {self.quality_passed}>"
