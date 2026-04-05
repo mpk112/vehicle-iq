@@ -48,6 +48,9 @@ Then open: http://localhost:3000
 - [Coding Standards](.kiro/steering/coding-standards.md)
 - [Testing Requirements](.kiro/steering/testing-requirements.md)
 
+### Development Workflow
+- [Branching Strategy](BRANCHING_STRATEGY.md) - Git workflow and branch management
+
 ## ✨ Features
 
 - **Fraud Detection**: 9 fraud signals with explainable AI
