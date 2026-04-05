@@ -62,6 +62,29 @@ docker-compose up -d embeddings
 docker-compose exec backend python scripts/generate_embeddings.py
 ```
 
+### ✅ Sample Image Generation Script (New - Ready to Use)
+
+**File:** `backend/scripts/generate_sample_images.py`
+
+**What it creates:**
+- 4 odometer images (various readings: 15k, 45k, 75k, 120k km)
+- 3 VIN plate images
+- 3 registration document images
+- 9 placeholder images (vehicle angles: front, rear, sides, diagonals, interior)
+
+**Features:**
+- Programmatically generated using PIL/Pillow
+- OCR-friendly text (readable by PaddleOCR)
+- Realistic layouts for testing
+- Reusable across assessments
+
+**How to run:**
+```bash
+docker-compose exec backend python scripts/generate_sample_images.py
+```
+
+**Output:** Images saved to `backend/storage/samples/`
+
 ## Complete Setup Process
 
 ### Step 1: Start Services
@@ -89,7 +112,12 @@ docker-compose exec backend python scripts/seed_enhanced.py
 docker-compose exec backend python scripts/generate_embeddings.py
 ```
 
-### Step 5: Verify Data
+### Step 5: Generate Sample Images (Optional)
+```bash
+docker-compose exec backend python scripts/generate_sample_images.py
+```
+
+### Step 6: Verify Data
 ```bash
 # Check database
 docker-compose exec postgres psql -U vehicleiq -d vehicleiq -c "
