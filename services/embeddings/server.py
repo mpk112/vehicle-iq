@@ -25,8 +25,20 @@ class BatchTextInput(BaseModel):
     texts: List[str] = Field(..., min_items=1, max_items=100)
 
 
+class VehicleAttributes(BaseModel):
+    """Vehicle attributes for embedding generation following Requirement 16.2."""
+    make: str
+    model: str
+    year: int = Field(ge=1990, le=2030)
+    variant: str
+    fuel_type: str  # "Petrol", "Diesel", "CNG", "Electric"
+    transmission: str  # "Manual", "Automatic"
+    mileage: int = Field(ge=0, le=999999)
+    location: str
+
+
 class VehicleDescription(BaseModel):
-    """Structured vehicle description for embedding generation."""
+    """Structured vehicle description for embedding generation (legacy)."""
     make: str
     model: str
     year: int
@@ -37,12 +49,75 @@ class VehicleDescription(BaseModel):
 
 
 class EmbeddingGenerator:
-    """Embedding generation functions."""
+    """Embedding generation functions following Requirements 16.1-16.8."""
+    
+    @staticmethod
+    def normalize_year(year: int) -> float:
+        """
+        Normalize year to 0-1 range.
+        
+        Args:
+            year: Vehicle year (1990-2030)
+            
+        Returns:
+            Normalized year value (0-1)
+        """
+        min_year = 1990
+        max_year = 2030
+        return (year - min_year) / (max_year - min_year)
+    
+    @staticmethod
+    def normalize_mileage(mileage: int) -> float:
+        """
+        Normalize mileage to 0-1 range.
+        
+        Args:
+            mileage: Vehicle mileage in km (0-999999)
+            
+        Returns:
+            Normalized mileage value (0-1)
+        """
+        max_mileage = 999999
+        return mileage / max_mileage
+    
+    @staticmethod
+    def format_vehicle_attributes(vehicle: VehicleAttributes) -> str:
+        """
+        Format vehicle attributes into consistent text representation.
+        Follows Requirement 16.2: concatenate in order: make, model, year, 
+        variant, fuel_type, transmission, mileage, location.
+        Follows Requirement 16.3: normalize numerical values.
+        
+        Args:
+            vehicle: Structured vehicle attributes
+            
+        Returns:
+            Formatted text description with normalized values
+        """
+        # Normalize numerical values
+        normalized_year = EmbeddingGenerator.normalize_year(vehicle.year)
+        normalized_mileage = EmbeddingGenerator.normalize_mileage(vehicle.mileage)
+        
+        # Concatenate in consistent order as per Requirement 16.2
+        description = (
+            f"Make: {vehicle.make}. "
+            f"Model: {vehicle.model}. "
+            f"Year: {vehicle.year} (normalized: {normalized_year:.4f}). "
+            f"Variant: {vehicle.variant}. "
+            f"Fuel Type: {vehicle.fuel_type}. "
+            f"Transmission: {vehicle.transmission}. "
+            f"Mileage: {vehicle.mileage} km (normalized: {normalized_mileage:.6f}). "
+            f"Location: {vehicle.location}."
+        )
+        
+        return description
     
     @staticmethod
     def generate_embedding(text: str) -> List[float]:
         """
         Generate 1024-dimensional embedding for text.
+        Follows Requirement 16.1: use bge-m3 model.
+        Follows Requirement 16.4: return 1024 dimensions.
         
         Args:
             text: Input text
@@ -54,12 +129,33 @@ class EmbeddingGenerator:
         return embedding.tolist()
     
     @staticmethod
+    def generate_vehicle_embedding(vehicle: VehicleAttributes) -> tuple[List[float], str]:
+        """
+        Generate embedding for vehicle attributes.
+        Follows Requirements 16.1-16.4.
+        
+        Args:
+            vehicle: Vehicle attributes
+            
+        Returns:
+            Tuple of (1024-dimensional embedding vector, formatted text)
+        """
+        # Format vehicle attributes consistently
+        description = EmbeddingGenerator.format_vehicle_attributes(vehicle)
+        
+        # Generate embedding
+        embedding = EmbeddingGenerator.generate_embedding(description)
+        
+        return embedding, description
+    
+    @staticmethod
     def generate_batch_embeddings(texts: List[str]) -> List[List[float]]:
         """
         Generate embeddings for multiple texts in batch.
+        Follows Requirement 16.6: support at least 100 vehicles within 10 seconds.
         
         Args:
-            texts: List of input texts
+            texts: List of input texts (max 100)
             
         Returns:
             List of 1024-dimensional embedding vectors
@@ -68,9 +164,32 @@ class EmbeddingGenerator:
         return embeddings.tolist()
     
     @staticmethod
+    def generate_batch_vehicle_embeddings(vehicles: List[VehicleAttributes]) -> tuple[List[List[float]], List[str]]:
+        """
+        Generate embeddings for multiple vehicles in batch.
+        Follows Requirement 16.6: support at least 100 vehicles within 10 seconds.
+        
+        Args:
+            vehicles: List of vehicle attributes (max 100)
+            
+        Returns:
+            Tuple of (list of embeddings, list of formatted descriptions)
+        """
+        # Format all vehicles consistently
+        descriptions = [
+            EmbeddingGenerator.format_vehicle_attributes(vehicle)
+            for vehicle in vehicles
+        ]
+        
+        # Generate embeddings in batch
+        embeddings = EmbeddingGenerator.generate_batch_embeddings(descriptions)
+        
+        return embeddings, descriptions
+    
+    @staticmethod
     def format_vehicle_description(vehicle: VehicleDescription) -> str:
         """
-        Format vehicle data into text description for embedding.
+        Format vehicle data into text description for embedding (legacy method).
         
         Args:
             vehicle: Structured vehicle data
@@ -97,6 +216,7 @@ class EmbeddingGenerator:
     def calculate_similarity(embedding1: List[float], embedding2: List[float]) -> float:
         """
         Calculate cosine similarity between two embeddings.
+        Follows Requirement 16.5: use cosine similarity metric.
         
         Args:
             embedding1: First embedding vector
@@ -185,7 +305,7 @@ async def generate_batch_embeddings(input_data: BatchTextInput):
 @app.post("/embeddings/vehicle")
 async def generate_vehicle_embedding(vehicle: VehicleDescription):
     """
-    Generate embedding for structured vehicle data.
+    Generate embedding for structured vehicle data (legacy endpoint).
     
     Args:
         vehicle: Structured vehicle description
@@ -213,25 +333,101 @@ async def generate_vehicle_embedding(vehicle: VehicleDescription):
         )
 
 
-@app.post("/embeddings/similarity")
-async def calculate_similarity(
-    text1: str = Field(..., min_length=1),
+@app.post("/embeddings/vehicle-attributes")
+async def generate_vehicle_attributes_embedding(vehicle: VehicleAttributes):
+    """
+    Generate embedding for vehicle attributes following Requirements 16.1-16.4.
+    Concatenates attributes in consistent order and normalizes numerical values.
+    
+    Args:
+        vehicle: Vehicle attributes (make, model, year, variant, fuel_type, 
+                 transmission, mileage, location)
+        
+    Returns:
+        1024-dimensional embedding vector and formatted text
+    """
+    try:
+        # Generate embedding with proper formatting
+        embedding, description = EmbeddingGenerator.generate_vehicle_embedding(vehicle)
+        
+        return {
+            "success": True,
+            "embedding": embedding,
+            "dimension": len(embedding),
+            "formatted_description": description,
+            "vehicle": vehicle.dict()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vehicle attributes embedding generation failed: {str(e)}"
+        )
+
+
+class BatchVehicleAttributes(BaseModel):
+    """Batch vehicle attributes for embedding generation."""
+    vehicles: List[VehicleAttributes] = Field(..., min_items=1, max_items=100)
+
+
+@app.post("/embeddings/vehicle-attributes-batch")
+async def generate_batch_vehicle_attributes_embeddings(batch: BatchVehicleAttributes):
+    """
+    Generate embeddings for multiple vehicles in batch.
+    Follows Requirement 16.6: support at least 100 vehicles within 10 seconds.
+    
+    Args:
+        batch: List of vehicle attributes (max 100)
+        
+    Returns:
+        List of 1024-dimensional embedding vectors and formatted descriptions
+    """
+    try:
+        import time
+        start_time = time.time()
+        
+        # Generate embeddings in batch
+        embeddings, descriptions = EmbeddingGenerator.generate_batch_vehicle_embeddings(
+            batch.vehicles
+        )
+        
+        processing_time = time.time() - start_time
+        
+        return {
+            "success": True,
+            "embeddings": embeddings,
+            "descriptions": descriptions,
+            "count": len(embeddings),
+            "dimension": len(embeddings[0]) if embeddings else 0,
+            "processing_time_seconds": round(processing_time, 3)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Batch vehicle embedding generation failed: {str(e)}"
+        )
+
+
+class SimilarityRequest(BaseModel):
+    """Request for similarity calculation."""
+    text1: str = Field(..., min_length=1)
     text2: str = Field(..., min_length=1)
-):
+
+
+@app.post("/embeddings/similarity")
+async def calculate_similarity(request: SimilarityRequest):
     """
     Calculate similarity between two texts.
     
     Args:
-        text1: First text
-        text2: Second text
+        request: Similarity request with two texts
         
     Returns:
         Cosine similarity score (0-1)
     """
     try:
         # Generate embeddings
-        embedding1 = EmbeddingGenerator.generate_embedding(text1)
-        embedding2 = EmbeddingGenerator.generate_embedding(text2)
+        embedding1 = EmbeddingGenerator.generate_embedding(request.text1)
+        embedding2 = EmbeddingGenerator.generate_embedding(request.text2)
         
         # Calculate similarity
         similarity = EmbeddingGenerator.calculate_similarity(embedding1, embedding2)
@@ -239,8 +435,8 @@ async def calculate_similarity(
         return {
             "success": True,
             "similarity": similarity,
-            "text1_length": len(text1),
-            "text2_length": len(text2)
+            "text1_length": len(request.text1),
+            "text2_length": len(request.text2)
         }
     except Exception as e:
         raise HTTPException(

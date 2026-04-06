@@ -46,7 +46,7 @@ def upgrade() -> None:
         sa.Column('email', sa.String(255), nullable=False, unique=True, index=True),
         sa.Column('hashed_password', sa.String(255), nullable=False),
         sa.Column('full_name', sa.String(255), nullable=False),
-        sa.Column('role', postgresql.ENUM('Assessor', 'Lender', 'Insurer', 'Broker', 'Admin', name='user_role'), nullable=False),
+        sa.Column('role', postgresql.ENUM('Assessor', 'Lender', 'Insurer', 'Broker', 'Admin', name='user_role', create_type=False), nullable=False),
         sa.Column('organization', sa.String(255), nullable=True),
         sa.Column('is_active', sa.String(10), default='true'),
         sa.Column('created_at', sa.DateTime(), nullable=False),

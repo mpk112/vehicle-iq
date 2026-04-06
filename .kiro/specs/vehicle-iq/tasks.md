@@ -397,15 +397,15 @@ This implementation plan breaks down the VehicleIQ platform into executable task
 
 ### Phase 4: AI Domain Integration - Price Prediction (Week 5)
 
-- [ ] 16. Implement embedding generation service
-  - [ ] 16.1 Create bge-m3 embeddings microservice
+- [x] 16. Implement embedding generation service
+  - [x] 16.1 Create bge-m3 embeddings microservice
     - Create services/embeddings/Dockerfile with Hugging Face Transformers
     - Load BAAI/bge-m3 model (1024-dimensional embeddings)
     - Create server.py with FastAPI endpoint for embedding generation
     - Add health check endpoint
     - _Requirements: 16.1, 16.4_
   
-  - [ ] 16.2 Implement embedding generation function
+  - [x] 16.2 Implement embedding generation function
     - Create generate_embedding() function
     - Concatenate vehicle attributes in consistent order: make, model, year, variant, fuel_type, transmission, mileage, location
     - Normalize numerical values (year, mileage) to standard ranges
@@ -419,14 +419,14 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 16.2**
     - Test that identical attributes produce identical embeddings and concatenation order is consistent
   
-  - [ ] 16.4 Implement batch embedding generation
+  - [x] 16.4 Implement batch embedding generation
     - Create generate_embeddings_batch() function
     - Support at least 100 vehicles per batch
     - Complete batch processing within 10 seconds
     - _Requirements: 16.6_
 
-- [ ] 17. Implement comparable vehicle retrieval (RAG)
-  - [ ] 17.1 Create vector similarity search function
+- [x] 17. Implement comparable vehicle retrieval (RAG)
+  - [x] 17.1 Create vector similarity search function
     - Create search_similar_vehicles() using pgvector cosine similarity
     - Query comparable_vehicles table with embedding vector
     - Apply constraints: same make/model, year ±2, mileage ±20k
@@ -442,7 +442,7 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 9.4**
     - Test that results are ordered by similarity, count <= 10, scores in [0,1], and constraints are satisfied
   
-  - [ ] 17.3 Implement constraint relaxation logic
+  - [x] 17.3 Implement constraint relaxation logic
     - If fewer than 5 results, relax year to ±3 and mileage to ±30k
     - Retry search with relaxed constraints
     - _Requirements: 9.6_
@@ -452,7 +452,7 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 9.6**
     - Test that constraints are relaxed when results < 5
   
-  - [ ] 17.5 Add comparable explainability
+  - [x] 17.5 Add comparable explainability
     - Include similarity score, listing price, listing date for each comparable
     - Generate key_differences list comparing attributes
     - _Requirements: 9.5, 9.8_
@@ -462,14 +462,14 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 9.5, 9.8**
     - Test that each comparable includes required explainability fields
 
-- [ ] 18. Implement 4-layer pricing model
-  - [ ] 18.1 Implement Layer 1: Base price lookup
+- [x] 18. Implement 4-layer pricing model
+  - [x] 18.1 Implement Layer 1: Base price lookup
     - Create get_base_price() function querying vehicle_registry
     - Match on make, model, year, variant
     - Cache results in Redis with 24-hour TTL
     - _Requirements: 2.1_
   
-  - [ ] 18.2 Implement Layer 2: Condition adjustment
+  - [x] 18.2 Implement Layer 2: Condition adjustment
     - Create apply_condition_adjustment() function
     - Calculate multiplier: 0.70 + 0.45 × (health_score / 100)
     - Apply to base price
@@ -480,12 +480,12 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 2.2**
     - Test that higher health score produces higher or equal adjusted price
   
-  - [ ] 18.3 Implement Layer 3: Comparable vehicle RAG
+  - [x] 18.3 Implement Layer 3: Comparable vehicle RAG
     - Integrate search_similar_vehicles() from task 17.1
     - Extract comparable prices into list
     - _Requirements: 2.3_
   
-  - [ ] 18.4 Implement Layer 4: Quantile regression
+  - [x] 18.4 Implement Layer 4: Quantile regression
     - Install scikit-learn QuantileRegressor
     - Fit quantile regression on comparable prices
     - Generate P10, P50, P90 predictions
@@ -497,8 +497,8 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 2.4**
     - Test that P10 <= P50 <= P90
 
-- [ ] 19. Implement persona-specific valuation
-  - [ ] 19.1 Create persona-specific value calculation
+- [x] 19. Implement persona-specific valuation
+  - [x] 19.1 Create persona-specific value calculation
     - For Lender: FSV = P10 × 0.95
     - For Insurer: IDV = P50 × depreciation_factor(age_years)
     - For Broker: asking_price = P90 × 1.05
@@ -509,7 +509,7 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 2.6, 2.8**
     - Test that Lender FSV <= P10 and Broker asking_price >= P90
   
-  - [ ] 19.3 Add price prediction explainability
+  - [x] 19.3 Add price prediction explainability
     - Create explanation dict with base_price_source, condition_adjustment, persona_adjustment
     - Include comparable vehicles used
     - _Requirements: 2.10_
@@ -519,8 +519,8 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 2.10**
     - Test that explanation contains required fields
 
-- [ ] 20. Create price prediction API endpoints
-  - [ ] 20.1 Create POST /v1/price/predict endpoint
+- [x] 20. Create price prediction API endpoints
+  - [x] 20.1 Create POST /v1/price/predict endpoint
     - Accept vehicle attributes, health_score, persona
     - Call PricePredictionML.predict()
     - Return base_price, adjusted_price, P10, P50, P90, persona_value, comparables, explanation
@@ -534,14 +534,14 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - Test comparable retrieval and constraint relaxation
     - Test processing time < 5 seconds
 
-- [ ] 21. Checkpoint - Verify price prediction domain
+- [x] 21. Checkpoint - Verify price prediction domain
   - Ensure all tests pass, ask the user if questions arise.
 
 
 ### Phase 5: AI Domain Integration - Health Score & Benchmarking (Week 6-7)
 
 - [ ] 22. Implement vehicle health score calculation
-  - [ ] 22.1 Create health score component calculations
+  - [x] 22.1 Create health score component calculations
     - Implement calculate_mechanical_condition() based on damage detections, odometer, service records
     - Implement calculate_exterior_condition() based on damage detections
     - Implement calculate_interior_condition() based on interior photo analysis
@@ -550,7 +550,7 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - Implement calculate_market_appeal() based on make/model/color popularity
     - _Requirements: 5.1_
   
-  - [ ] 22.2 Implement persona-specific weighted scoring
+  - [x] 22.2 Implement persona-specific weighted scoring
     - Define PERSONA_WEIGHTS dict for Lender, Insurer, Broker
     - Create calculate_health_score() applying persona-specific weights
     - Calculate weighted sum of components
@@ -563,12 +563,12 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 5.2, 5.3, 5.4**
     - Test that health score is 0-100 and equals weighted sum before fraud gate
   
-  - [ ] 22.4 Integrate fraud gate logic
+  - [x] 22.4 Integrate fraud gate logic
     - Apply fraud gate from task 12.3
     - Cap health score at 30 if fraud_confidence > 60
     - _Requirements: 5.5, 5.6_
   
-  - [ ] 22.5 Implement low health score flagging
+  - [x] 22.5 Implement low health score flagging
     - If health_score < 40, add to manual_review_queue with standard priority
     - _Requirements: 5.7, 11.2_
   
@@ -577,7 +577,7 @@ This implementation plan breaks down the VehicleIQ platform into executable task
     - **Validates: Requirements 5.7, 11.2**
     - Test that health_score < 40 triggers manual review flag
   
-  - [ ] 22.7 Add health score explainability
+  - [x] 22.7 Add health score explainability
     - Create component_breakdown dict showing contribution of each component
     - Generate explanation list with human-readable factors
     - _Requirements: 5.9_

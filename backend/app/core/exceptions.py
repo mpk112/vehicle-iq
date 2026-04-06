@@ -63,3 +63,10 @@ class ExternalServiceException(VehicleIQException):
             code="EXTERNAL_SERVICE_ERROR",
             details={"service": service},
         )
+
+
+class ServiceUnavailableError(VehicleIQException):
+    """Service unavailable exception."""
+
+    def __init__(self, message: str = "Service unavailable"):
+        super().__init__(message, code="SERVICE_UNAVAILABLE")
